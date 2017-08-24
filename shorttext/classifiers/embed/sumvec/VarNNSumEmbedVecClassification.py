@@ -24,11 +24,11 @@ class VarNNSumEmbeddedVecClassifier:
     <https://drive.google.com/file/d/0B7XkCwpI5KDYNlNUTTlSS21pQmM/edit>`_.
 
     """
-    def __init__(self, wvmodel, vecsize=300, maxlen=15):
+    def __init__(self, wvmodel, vecsize=100, maxlen=15):
         """ Initialize the classifier.
 
         :param wvmodel: Word2Vec model
-        :param vecsize: length of the embedded vectors in the model (Default: 300)
+        :param vecsize: length of the embedded vectors in the model (Default: 100)
         :param maxlen: maximum number of words in a sentence (Default: 15)
         :type wvmodel: gensim.models.word2vec.Word2Vec
         :type vecsize: int
@@ -42,7 +42,7 @@ class VarNNSumEmbeddedVecClassifier:
     def convert_traindata_embedvecs(self, classdict):
         """ Convert the training text data into embedded matrix.
 
-        COnvert the training text data into embedded matrix, where each short sentence
+        Convert the training text data into embedded matrix, where each short sentence
         is a normalized summed embedded vectors for all words.
 
         :param classdict: training data
@@ -60,7 +60,10 @@ class VarNNSumEmbeddedVecClassifier:
                 embedvec = np.sum(np.array([self.word_to_embedvec(token) for token in spacy_tokenize(shorttext)]),
                                   axis=0)
                 # embedvec = np.reshape(embedvec, embedvec.shape+(1,))
-                embedvec /= np.linalg.norm(embedvec)
+                norm = np.linalg.norm(embedvec)
+                if norm == 0:
+                    continue
+                embedvec /= norm
                 embedvecs.append(embedvec)
                 category_bucket = [0]*len(classlabels)
                 category_bucket[lblidx_dict[classlabel]] = 1
@@ -190,15 +193,12 @@ class VarNNSumEmbeddedVecClassifier:
         if not self.trained:
             raise e.ModelNotTrainedException()
 
-        # retrieve vector
-        embedvec = np.array([self.shorttext_to_embedvec(shorttext)])
-        embedvec = np.reshape(embedvec, embedvec.shape+(1,))
+            # retrieve vector
+        embedvec = np.array(self.shorttext_to_embedvec(shorttext))
 
         # classification using the neural network
-        predictions = self.model.predict(embedvec)
+        predictions = self.model.predict(np.array([embedvec]))
 
         # wrangle output result
-        scoredict = {}
-        for idx, classlabel in enumerate(self.classlabels):
-            scoredict[classlabel] = predictions[0][idx]
+        scoredict = {classlabel: predictions[0][idx] for idx, classlabel in enumerate(self.classlabels)}
         return scoredict

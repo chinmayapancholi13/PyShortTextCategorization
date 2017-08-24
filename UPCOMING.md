@@ -4,7 +4,6 @@ Upcoming Updates to `shorttext`
 Confirmed Updates
 -----------------
 
-
 Expected Updates
 ----------------
 
@@ -12,8 +11,7 @@ Expected Updates
 * Python 3 compatibility;
 * More neural networks;
 * More available corpus;
-* Maximum entropy models;
-* Generative models;
-* Support of seq2seq models;
+* More generative models;
+* Support of seq2seq models (character-based);
 * Gradual fading-out dependence on `Theano`, and lesser `keras` but more fundamental `Tensorflow`;
-* Other word-embedding models.
+* Spelling corrections and fuzzy logic.

@@ -1,6 +1,11 @@
 News
 ====
 
+* 08/22/2017: `shorttext` 0.5.1 released.
+* 07/28/2017: `shorttext` 0.4.1 released.
+* 07/26/2017: `shorttext` 0.4.0 released.
+* 06/16/2017: `shorttext` 0.3.8 released.
+* 06/12/2017: `shorttext` 0.3.7 released.
 * 06/02/2017: `shorttext` 0.3.6 released.
 * 05/30/2017: GSoC project (`Chinmaya Pancholi
   <https://rare-technologies.com/google-summer-of-code-2017-week-1-on-integrating-gensim-with-scikit-learn-and-keras/>`_ ).
@@ -15,7 +20,40 @@ News
 * 11/21/2016: `shorttext` 0.1.1 released.
 
 What's New
-==========
+----------
+
+Release 0.5.1 (August 22, 2017)
+-------------------------------
+
+* Implementation of Damerau-Levenshtein distance and soft Jaccard score;
+* Implementation of Word Mover's distance.
+
+
+Release 0.4.1 (July 28, 2017)
+-----------------------------
+
+* Further Travis.CI update tests;
+* Model file I/O updated (for huge models);
+* Migrating documentation to [readthedocs.org](readthedocs.org); previous documentation at `Pythonhosted.org` destroyed.
+
+
+Release 0.4.0 (July 26, 2017)
+-----------------------------
+
+* Maximum entropy models;
+* Use of `gensim` Word2Vec `keras` layers;
+* Incorporating new features from `gensim`;
+* Use of Travis.CI for pull request testing.
+
+Release 0.3.8 (June 16, 2017)
+-----------------------------
+
+* Bug fixed on `sumvecframeworks`.
+
+Release 0.3.7 (June 12, 2017)
+-----------------------------
+
+* Bug fixed on `VarNNSumEmbedVecClassifier`.
 
 Release 0.3.6 (June 2, 2017)
 ----------------------------

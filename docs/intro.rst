@@ -15,12 +15,18 @@ Characteristics:
 - pre-trained word-embedding support; (see :doc:`tutorial_wordembed`)
 - `gensim` topic models (LDA, LSI, Random Projections) and autoencoder; (see :doc:`tutorial_topic`)
 - topic model representation supported for supervised learning using `scikit-learn`; (see :doc:`tutorial_topic`)
-- cosine distance classification; (see :doc:`tutorial_topic`, :doc:`tutorial_umvec`) and
-- neural network classification (including ConvNet, and C-LSTM). (see :doc:`tutorial_nnlib`)
+- cosine distance classification; (see :doc:`tutorial_topic`, :doc:`tutorial_umvec`)
+- neural network classification (including ConvNet, and C-LSTM); (see :doc:`tutorial_nnlib`)
+- maximum entropy classification; (see :doc:`tutorial_maxent`) and
+- metrics of phrases differences, including soft Jaccard score (using Damerau-Levenshtein distance), and Word Mover's distance (WMD). (see :doc:`tutorial_metrics`)
 
-Author: Kwan-Yuet Ho (LinkedIn_, ResearchGate_)
+Part of the package was implemented using C, and it is interfaced to Python using SWIG_ (Simplified Wrapper and Interface Generator).
+
+Author: Kwan-Yuet Ho (LinkedIn_, ResearchGate_, Twitter_)
 
 Home: :doc:`index`
 
 .. _LinkedIn: https://www.linkedin.com/in/kwan-yuet-ho-19882530
 .. _ResearchGate: https://www.researchgate.net/profile/Kwan-yuet_Ho
+.. _Twitter: https://twitter.com/stephenhky
+.. _SWIG: http://www.swig.org/

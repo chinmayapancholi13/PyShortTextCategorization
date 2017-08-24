@@ -1,4 +1,10 @@
+
+import json
+import os
+
 import numpy as np
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
 
 import shorttext.utils.kerasmodel_io as kerasio
 import shorttext.utils.classification_exceptions as e
@@ -6,7 +12,7 @@ from shorttext.utils import tokenize
 import shorttext.utils.compactmodel_io as cio
 
 
-@cio.compactio({'classifier': 'nnlibvec'}, 'nnlibvec', ['_classlabels.txt', '.json', '.h5'])
+@cio.compactio({'classifier': 'nnlibvec'}, 'nnlibvec', ['_classlabels.txt', '.json', '.h5', '_config.json'])
 class VarNNEmbeddedVecClassifier:
     """
     This is a wrapper for various neural network algorithms
@@ -35,8 +41,8 @@ class VarNNEmbeddedVecClassifier:
     >>> trainclassdict = shorttext.data.subjectkeywords()
     >>>
     >>> # initialize the classifier and train
-    >>> kmodel = shorttext.classifiers.frameworks.CNNWordEmbed(len(trainclassdict.keys()))    # using convolutional neural network model
-    >>> classifier = shorttext.classifiers.VarNNEmbeddedVecClassifier(wvmodel)
+    >>> kmodel = shorttext.classifiers.frameworks.CNNWordEmbed(len(trainclassdict.keys()), vecsize=300)    # using convolutional neural network model
+    >>> classifier = shorttext.classifiers.VarNNEmbeddedVecClassifier(wvmodel, vecsize=300)
     >>> classifier.train(trainclassdict, kmodel)
     Epoch 1/10
     45/45 [==============================] - 0s - loss: 1.0578
@@ -61,19 +67,20 @@ class VarNNEmbeddedVecClassifier:
     >>> classifier.score('artificial intelligence')
     {'mathematics': 0.57749695, 'physics': 0.33749574, 'theology': 0.085007325}
     """
-    def __init__(self, wvmodel, vecsize=300, maxlen=15):
+    def __init__(self, wvmodel, vecsize=100, maxlen=15, with_gensim=False):
         """ Initialize the classifier.
 
         :param wvmodel: Word2Vec model
-        :param vecsize: length of the embedded vectors in the model (Default: 300)
+        :param vecsize: length of the embedded vectors in the model (Default: 100)
         :param maxlen: maximum number of words in a sentence (Default: 15)
-        :type wvmodel: gensim.models.word2vec.Word2Vec
+        :type wvmodel: gensim.models.keyedvectors.KeyedVectors
         :type vecsize: int
         :type maxlen: int
         """
         self.wvmodel = wvmodel
         self.vecsize = vecsize
         self.maxlen = maxlen
+        self.with_gensim = with_gensim
         self.trained = False
 
     def convert_trainingdata_matrix(self, classdict):
@@ -99,7 +106,13 @@ class VarNNEmbeddedVecClassifier:
                 category_bucket = [0]*len(classlabels)
                 category_bucket[lblidx_dict[label]] = 1
                 indices.append(category_bucket)
-                phrases.append(tokenize(shorttext))
+                if self.with_gensim:
+                    phrases.append(shorttext)
+                else:
+                    phrases.append(tokenize(shorttext))
+
+        if self.with_gensim:
+            return classlabels, phrases, indices
 
         # store embedded vectors
         train_embedvec = np.zeros(shape=(len(phrases), self.maxlen, self.vecsize))
@@ -109,7 +122,6 @@ class VarNNEmbeddedVecClassifier:
         indices = np.array(indices, dtype=np.int)
 
         return classlabels, train_embedvec, indices
-
 
     def train(self, classdict, kerasmodel, nb_epoch=10):
         """ Train the classifier.
@@ -127,11 +139,23 @@ class VarNNEmbeddedVecClassifier:
         :type kerasmodel: keras.models.Sequential
         :type nb_epoch: int
         """
-        # convert classdict to training input vectors
-        self.classlabels, train_embedvec, indices = self.convert_trainingdata_matrix(classdict)
+        if self.with_gensim:
+            # convert classdict to training input vectors
+            self.classlabels, x_train, y_train = self.convert_trainingdata_matrix(classdict)
 
-        # train the model
-        kerasmodel.fit(train_embedvec, indices, epochs=nb_epoch)
+            tokenizer = Tokenizer()
+            tokenizer.fit_on_texts(x_train)
+            x_train = tokenizer.texts_to_sequences(x_train)
+            x_train = pad_sequences(x_train, maxlen=self.maxlen)
+
+            # train the model
+            kerasmodel.fit(x_train, y_train, epochs=nb_epoch)
+        else:
+            # convert classdict to training input vectors
+            self.classlabels, train_embedvec, indices = self.convert_trainingdata_matrix(classdict)
+
+            # train the model
+            kerasmodel.fit(train_embedvec, indices, epochs=nb_epoch)
 
         # flag switch
         self.model = kerasmodel
@@ -142,7 +166,8 @@ class VarNNEmbeddedVecClassifier:
 
         Given the prefix of the file paths, save the model into files, with name given by the prefix.
         There will be three files produced, one name ending with "_classlabels.txt", one name
-        ending with ".json", and one name ending with ".h5".
+        ending with ".json", and one name ending with ".h5". For shorttext>=0.4.0, another file
+        with extension "_config.json" would be created.
 
         If there is no trained model, a `ModelNotTrainedException` will be thrown.
 
@@ -157,12 +182,14 @@ class VarNNEmbeddedVecClassifier:
         labelfile = open(nameprefix+'_classlabels.txt', 'w')
         labelfile.write('\n'.join(self.classlabels))
         labelfile.close()
+        json.dump({'with_gensim': self.with_gensim}, open(nameprefix+'_config.json', 'w'))
 
     def loadmodel(self, nameprefix):
         """ Load a trained model from files.
 
         Given the prefix of the file paths, load the model from files with name given by the prefix
-        followed by "_classlabels.txt", ".json", and ".h5".
+        followed by "_classlabels.txt", ".json" and ".h5". For shorttext>=0.4.0, a file with
+        extension "_config.json" would also be used.
 
         If this has not been run, or a model was not trained by :func:`~train`,
         a `ModelNotTrainedException` will be raised while performing prediction or saving the model.
@@ -176,6 +203,12 @@ class VarNNEmbeddedVecClassifier:
         self.classlabels = labelfile.readlines()
         labelfile.close()
         self.classlabels = map(lambda s: s.strip(), self.classlabels)
+        # check if _config.json exists.
+        # This file does not exist if the model was created with shorttext<0.4.0
+        if os.path.exists(nameprefix+'_config.json'):
+            self.with_gensim = json.load(open(nameprefix+'_config.json', 'r'))['with_gensim']
+        else:
+            self.with_gensim = False
         self.trained = True
 
     def word_to_embedvec(self, word):
@@ -210,6 +243,18 @@ class VarNNEmbeddedVecClassifier:
             matrix[i] = self.word_to_embedvec(tokens[i])
         return matrix
 
+    def process_text(self, shorttext):
+        """Process the input text by tokenizing and padding it.
+
+        :param shorttext: a short sentence
+        """
+        tokenizer = Tokenizer()
+        tokenizer.fit_on_texts(shorttext)
+        x_train = tokenizer.texts_to_sequences(shorttext)
+
+        x_train = pad_sequences(x_train, maxlen=self.maxlen)
+        return x_train
+
     def score(self, shorttext):
         """ Calculate the scores for all the class labels for the given short sentence.
 
@@ -227,8 +272,12 @@ class VarNNEmbeddedVecClassifier:
         if not self.trained:
             raise e.ModelNotTrainedException()
 
-        # retrieve vector
-        matrix = np.array([self.shorttext_to_matrix(shorttext)])
+        if self.with_gensim:
+            # tokenize and pad input text
+            matrix = self.process_text(shorttext)
+        else:
+            # retrieve vector
+            matrix = np.array([self.shorttext_to_matrix(shorttext)])
 
         # classification using the neural network
         predictions = self.model.predict(matrix)
@@ -237,6 +286,7 @@ class VarNNEmbeddedVecClassifier:
         scoredict = {}
         for idx, classlabel in zip(range(len(self.classlabels)), self.classlabels):
             scoredict[classlabel] = predictions[0][idx]
+
         return scoredict
 
 def load_varnnlibvec_classifier(wvmodel, name, compact=True):

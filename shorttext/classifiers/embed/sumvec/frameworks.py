@@ -8,7 +8,7 @@ from shorttext.utils.classification_exceptions import UnequalArrayLengthsExcepti
 def DenseWordEmbed(nb_labels,
                    dense_nb_nodes=[],
                    dense_actfcn=[],
-                   vecsize=300,
+                   vecsize=100,
                    reg_coef=0.1,
                    final_activiation='softmax',
                    optimizer='adam'):
@@ -19,7 +19,7 @@ def DenseWordEmbed(nb_labels,
     :param nb_labels: number of class labels
     :param dense_nb_nodes: number of nodes in each later (Default: [])
     :param dense_actfcn: activation functions for each layer (Default: [])
-    :param vecsize: length of the embedded vectors in the model (Default: 300)
+    :param vecsize: length of the embedded vectors in the model (Default: 100)
     :param reg_coef: regularization coefficient (Default: 0.1)
     :param final_activiation: activation function of the final layer (Default: softmax)
     :param optimizer: optimizer for gradient descent. Options: sgd, rmsprop, adagrad, adadelta, adam, adamax, nadam. (Default: adam)
@@ -39,11 +39,25 @@ def DenseWordEmbed(nb_labels,
 
     model = Sequential()
     if nb_layers==0:
-        model.add(Dense(nb_labels, input_dim=vecsize, activation=final_activiation, W_regularizer=l2(reg_coef)))
+        model.add(Dense(nb_labels,
+                        input_shape=(vecsize,),
+                        activation=final_activiation,
+                        kernel_regularizer=l2(reg_coef)))
     else:
-        for nb_nodes, activation in zip(dense_nb_nodes, dense_actfcn):
-            model.add(Dense(nb_nodes, activation=activation, W_regularizer=l2(reg_coef)))
-        model.add(Dense(nb_labels, activation=final_activiation, W_regularizer=l2(reg_coef)))
+        model.add(Dense(dense_nb_nodes[0],
+                        input_shape=(vecsize,),
+                        activation=dense_actfcn[0],
+                        kernel_regularizer=l2(reg_coef))
+                  )
+        for nb_nodes, activation in zip(dense_nb_nodes[1:], dense_actfcn[1:]):
+            model.add(Dense(nb_nodes,
+                            activation=activation,
+                            kernel_regularizer=l2(reg_coef))
+                      )
+        model.add(Dense(nb_labels,
+                        activation=final_activiation,
+                        kernel_regularizer=l2(reg_coef))
+                  )
     model.compile(loss='categorical_crossentropy', optimizer=optimizer)
 
     return model
